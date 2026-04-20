@@ -1,0 +1,244 @@
+---
+# ==========================================
+# Backend API - PersistentVolumeClaim (Uploads)
+# ==========================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: api-uploads-pvc
+  namespace: pativar
+  labels:
+    app: pativar-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# ==========================================
+# Backend API - Service
+# ==========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: pativar-api
+  namespace: pativar
+  labels:
+    app: pativar-api
+    app.kubernetes.io/part-of: pativar
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3001
+      targetPort: 3001
+      protocol: TCP
+      name: http
+  selector:
+    app: pativar-api
+
+---
+# ==========================================
+# Backend API - Deployment
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pativar-api
+  namespace: pativar
+  labels:
+    app: pativar-api
+    app.kubernetes.io/part-of: pativar
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: pativar-api
+  template:
+    metadata:
+      labels:
+        app: pativar-api
+        app.kubernetes.io/part-of: pativar
+    spec:
+      # Init container: run DB migrations
+      initContainers:
+        - name: db-migrate
+          image: pativar-api:latest  # Replace with your registry
+          command: ["sh", "-c", "echo 'Waiting for DB...' && sleep 10 && echo 'DB migration would run here'"]
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pativar-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pativar-secrets
+                  key: DB_PASSWORD
+
+      containers:
+        - name: api
+          image: pativar-api:latest  # Replace with your registry: e.g., ghcr.io/username/pativar-api:v1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+              name: http
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: API_PORT
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pativar-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pativar-secrets
+                  key: DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pativar-secrets
+                  key: JWT_SECRET
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: FRONTEND_URL
+            - name: API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: API_BASE_URL
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: api-uploads-pvc
+
+      # Graceful shutdown
+      terminationGracePeriodSeconds: 30
+
+---
+# ==========================================
+# Backend API - HorizontalPodAutoscaler
+# ==========================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pativar-api-hpa
+  namespace: pativar
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pativar-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+
+---
+# ==========================================
+# Backend API - PodDisruptionBudget
+# ==========================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pativar-api-pdb
+  namespace: pativar
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pativar-api

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /profil
+Disallow: /favoriler
+Disallow: /odeme
+Disallow: /ilan-ver
+Disallow: /ilan-duzenle
+Disallow: /giris
+Disallow: /kayit
+Disallow: /api/
+
+Sitemap: https://pativar.com/sitemap.xml

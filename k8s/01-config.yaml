@@ -1,0 +1,52 @@
+---
+# ==========================================
+# ConfigMap - Non-sensitive configuration
+# ==========================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pativar-config
+  namespace: pativar
+  labels:
+    app.kubernetes.io/part-of: pativar
+data:
+  NODE_ENV: "production"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_NAME: "pativar"
+  API_PORT: "3001"
+  FRONTEND_PORT: "3000"
+  FRONTEND_URL: "http://pativar-frontend:3000"
+  API_BASE_URL: "http://pativar-api:3001"
+
+---
+# ==========================================
+# Secret - Sensitive configuration
+# Change these values in production!
+# ==========================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pativar-secrets
+  namespace: pativar
+  labels:
+    app.kubernetes.io/part-of: pativar
+type: Opaque
+stringData:
+  DB_USER: "pativar"
+  DB_PASSWORD: "pativar123"
+  POSTGRES_PASSWORD: "pativar123"
+  JWT_SECRET: "change-this-to-a-very-secure-random-string-in-production-minimum-32-chars"
+
+---
+# ==========================================
+# Secret - Docker Registry (if private)
+# ==========================================
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: pativar-registry
+#   namespace: pativar
+# type: kubernetes.io/dockerconfigjson
+# data:
+#   .dockerconfigjson: <base64-encoded-docker-config>

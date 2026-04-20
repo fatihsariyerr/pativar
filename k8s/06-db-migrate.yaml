@@ -1,0 +1,80 @@
+---
+# ==========================================
+# Database Migration Job
+# Run: kubectl apply -f 06-db-migrate.yaml
+# Re-run: kubectl delete job db-migrate -n pativar && kubectl apply -f 06-db-migrate.yaml
+# ==========================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  namespace: pativar
+  labels:
+    app: db-migrate
+    app.kubernetes.io/part-of: pativar
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: db-migrate
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "🐾 PatiVar DB Migration başlatılıyor..."
+              echo "DB Host: $DB_HOST:$DB_PORT"
+
+              # Wait for postgres
+              until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME; do
+                echo "⏳ PostgreSQL bekleniyor..."
+                sleep 2
+              done
+
+              echo "✅ PostgreSQL hazır! Migration çalıştırılıyor..."
+
+              # Run schema
+              PGPASSWORD=$DB_PASSWORD psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f /migrations/schema.sql
+
+              echo "🎉 Migration tamamlandı!"
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: pativar-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pativar-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pativar-secrets
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: migration-scripts
+              mountPath: /migrations
+      volumes:
+        - name: migration-scripts
+          configMap:
+            name: pativar-schema
+            # Create this configmap from schema.sql:
+            # kubectl create configmap pativar-schema --from-file=schema.sql=backend/db/schema.sql -n pativar

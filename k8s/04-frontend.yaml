@@ -1,0 +1,119 @@
+---
+# ==========================================
+# Frontend - Service
+# ==========================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: pativar-frontend
+  namespace: pativar
+  labels:
+    app: pativar-frontend
+    app.kubernetes.io/part-of: pativar
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app: pativar-frontend
+
+---
+# ==========================================
+# Frontend - Deployment
+# ==========================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pativar-frontend
+  namespace: pativar
+  labels:
+    app: pativar-frontend
+    app.kubernetes.io/part-of: pativar
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: pativar-frontend
+  template:
+    metadata:
+      labels:
+        app: pativar-frontend
+        app.kubernetes.io/part-of: pativar
+    spec:
+      containers:
+        - name: frontend
+          image: pativar-frontend:latest  # Replace: ghcr.io/username/pativar-frontend:v1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /nginx-health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /nginx-health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 3
+
+      terminationGracePeriodSeconds: 15
+
+---
+# ==========================================
+# Frontend - HorizontalPodAutoscaler
+# ==========================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pativar-frontend-hpa
+  namespace: pativar
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pativar-frontend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+# ==========================================
+# Frontend - PodDisruptionBudget
+# ==========================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pativar-frontend-pdb
+  namespace: pativar
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: pativar-frontend
