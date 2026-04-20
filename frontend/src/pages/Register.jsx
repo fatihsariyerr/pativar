@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { cities } from '../utils/cities';
 import SEO from '../components/SEO';
 import PhoneVerification from '../components/PhoneVerification';
+import api from '../utils/api';
 
 export default function Register() {
   const { register } = useAuth();
@@ -14,6 +15,7 @@ export default function Register() {
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '', password_confirm: '', city: '' });
   const [phoneIdToken, setPhoneIdToken] = useState(null);
   const [verifiedPhone, setVerifiedPhone] = useState('');
+  const [phoneStatus, setPhoneStatus] = useState({ state: 'idle', message: '' });
 
   const update = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -22,6 +24,33 @@ export default function Register() {
       setVerifiedPhone('');
     }
   };
+
+  useEffect(() => {
+    if (!/^(\+90|0)?[0-9]{10}$/.test(form.phone)) {
+      setPhoneStatus({ state: 'idle', message: '' });
+      return;
+    }
+    setPhoneStatus({ state: 'checking', message: 'Kontrol ediliyor...' });
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await api.post('/auth/check-phone', { phone: form.phone }, { signal: ctrl.signal });
+        if (res.data?.available) {
+          setPhoneStatus({ state: 'available', message: '' });
+        } else {
+          setPhoneStatus({ state: 'taken', message: res.data?.error || 'Bu telefon numarası ile zaten bir üyelik mevcut.' });
+        }
+      } catch (err) {
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+        if (err.response?.status === 409) {
+          setPhoneStatus({ state: 'taken', message: err.response.data?.error || 'Bu telefon numarası ile zaten bir üyelik mevcut.' });
+        } else {
+          setPhoneStatus({ state: 'idle', message: '' });
+        }
+      }
+    }, 400);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [form.phone]);
 
   const formatPhone = (digits) => {
     const d = digits.slice(0, 11);
@@ -36,6 +65,7 @@ export default function Register() {
     if (form.password !== form.password_confirm) return toast.error('Şifreler eşleşmiyor');
     if (form.password.length < 6) return toast.error('Şifre en az 6 karakter olmalı');
     if (!form.phone.match(/^(\+90|0)?[0-9]{10}$/)) return toast.error('Geçerli bir telefon numarası giriniz');
+    if (phoneStatus.state === 'taken') return toast.error(phoneStatus.message);
     if (!phoneIdToken) return toast.error('Lütfen önce telefon numaranızı doğrulayın');
 
     setLoading(true);
@@ -108,11 +138,23 @@ export default function Register() {
                 placeholder="05XX XXX XX XX"
                 className="input-field"
               />
+              {phoneStatus.state === 'taken' && (
+                <div className="mt-2 p-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-medium">
+                  ⚠️ {phoneStatus.message} <Link to="/giris" className="underline font-bold">Giriş yap</Link>
+                </div>
+              )}
+              {phoneStatus.state === 'checking' && (
+                <div className="mt-2 text-xs text-gray-500">Telefon numarası kontrol ediliyor...</div>
+              )}
               <div className="mt-2">
                 <PhoneVerification
                   phone={form.phone}
                   onVerified={handlePhoneVerified}
-                  disabled={!/^(\+90|0)?[0-9]{10}$/.test(form.phone) || (phoneIdToken && form.phone === verifiedPhone)}
+                  disabled={
+                    !/^(\+90|0)?[0-9]{10}$/.test(form.phone) ||
+                    phoneStatus.state !== 'available' ||
+                    (phoneIdToken && form.phone === verifiedPhone)
+                  }
                 />
               </div>
             </div>
@@ -144,7 +186,7 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={loading || !phoneIdToken}
+              disabled={loading || !phoneIdToken || phoneStatus.state === 'taken'}
               className="btn-primary w-full !mt-5 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? '⏳ Kayıt yapılıyor...' : '🎉 Ücretsiz Kayıt Ol'}

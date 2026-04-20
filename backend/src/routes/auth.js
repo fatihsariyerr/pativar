@@ -6,6 +6,28 @@ const db = require('../utils/db');
 const { generateToken, authenticateToken } = require('../middleware/auth');
 const { verifyPhoneIdToken } = require('../utils/firebaseAdmin');
 
+// Check phone availability (before sending SMS verification)
+router.post('/check-phone', [
+  body('phone').matches(/^(\+90|0)?[0-9]{10}$/).withMessage('Geçerli bir telefon numarası giriniz'),
+], async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ available: false, error: errors.array()[0].msg });
+    }
+
+    let normalizedPhone = req.body.phone.replace(/\s/g, '');
+    if (normalizedPhone.startsWith('0')) normalizedPhone = '+90' + normalizedPhone.slice(1);
+    if (!normalizedPhone.startsWith('+')) normalizedPhone = '+90' + normalizedPhone;
+
+    const result = await db.query('SELECT id FROM users WHERE phone = $1', [normalizedPhone]);
+    if (result.rows.length > 0) {
+      return res.status(409).json({ available: false, error: 'Bu telefon numarası ile zaten bir üyelik mevcut.' });
+    }
+    res.json({ available: true });
+  } catch (err) { next(err); }
+});
+
 // Register
 router.post('/register', [
   body('email').isEmail().withMessage('Geçerli bir e-posta adresi giriniz'),
