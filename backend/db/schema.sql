@@ -114,7 +114,7 @@ CREATE TABLE listings (
     title VARCHAR(200) NOT NULL,
     description TEXT,
     pet_type pet_type NOT NULL,
-    purpose listing_purpose NOT NULL DEFAULT 'sale',
+    purpose listing_purpose NOT NULL DEFAULT 'adoption',
     price DECIMAL(10,2),
     is_price_negotiable BOOLEAN DEFAULT FALSE,
     status listing_status DEFAULT 'draft',
