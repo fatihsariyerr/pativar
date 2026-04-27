@@ -11,12 +11,13 @@ export default function PetCard({ listing }) {
   return (
     <Link to={`/ilan/${listing.id}`} className={`card group cursor-pointer ${isPremium ? 'ring-2 ring-amber-300/70 shadow-lg' : ''}`}>
       {/* Image */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-cream-100 to-peach-50">
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-cream-100 to-peach-50">
         {listing.primary_image ? (
           <img src={listing.primary_image}
             alt={`${listing.title}${listing.breed_name ? ' - ' + listing.breed_name : ''} ${listing.pet_type === 'cat' ? 'kedi' : 'köpek'} ${listing.purpose === 'mating' ? 'çiftleştirme' : 'sahiplendirme'} ilanı${listing.city ? ' - ' + listing.city : ''}`}
             loading="lazy"
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+            width="400" height="400"
+            className="w-full h-full object-cover object-[50%_30%] group-hover:scale-110 transition-transform duration-700" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <span className="text-6xl opacity-30">{listing.pet_type === 'cat' ? '🐱' : '🐶'}</span>

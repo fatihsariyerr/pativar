@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const { body, validationResult } = require('express-validator');
 const db = require('../utils/db');
 const { generateToken, authenticateToken } = require('../middleware/auth');
-const { verifyPhoneIdToken } = require('../utils/firebaseAdmin');
 
 // Check phone availability (before sending SMS verification)
 router.post('/check-phone', [
@@ -42,26 +41,12 @@ router.post('/register', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, phone, password, first_name, last_name, city, district, firebase_id_token } = req.body;
-
-    if (!firebase_id_token) {
-      return res.status(400).json({ error: 'Telefon doğrulaması gerekli' });
-    }
+    const { email, phone, password, first_name, last_name, city, district } = req.body;
 
     // Normalize phone number
     let normalizedPhone = phone.replace(/\s/g, '');
     if (normalizedPhone.startsWith('0')) normalizedPhone = '+90' + normalizedPhone.slice(1);
     if (!normalizedPhone.startsWith('+')) normalizedPhone = '+90' + normalizedPhone;
-
-    // Verify Firebase phone token matches submitted phone
-    try {
-      const decoded = await verifyPhoneIdToken(firebase_id_token);
-      if (decoded.phone_number !== normalizedPhone) {
-        return res.status(400).json({ error: 'Doğrulanan telefon numarası ile kayıt numarası eşleşmiyor' });
-      }
-    } catch (err) {
-      return res.status(401).json({ error: 'Telefon doğrulama token geçersiz veya süresi dolmuş' });
-    }
 
     // Check if phone already exists
     const phoneCheck = await db.query('SELECT id FROM users WHERE phone = $1', [normalizedPhone]);

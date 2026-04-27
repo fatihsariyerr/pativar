@@ -46,8 +46,8 @@ export default function Home() {
   return (
     <div className="animated-bg">
       <SEO
-        title="Kedi & Köpek İlanları - Sahiplendirme ve Çiftleştirme"
-        description="Türkiye'nin en kapsamlı kedi ve köpek ilan platformu. Ücretsiz sahiplendirme ilanları, cins filtreleri, şehir bazlı arama ile patili dostunuza yuva bulun."
+        title="Kedi & Köpek Sahiplendirme ve Çiftleştirme"
+        description="Türkiye'nin kedi ve köpek ilan platformu. Ücretsiz sahiplendirme ilanları, cins ve şehir bazlı arama ile patili dostuna yuva bulun."
         jsonLd={homeJsonLd}
       />
       {/* Hero */}

@@ -154,7 +154,14 @@ export default function CreateListing() {
     }
     setSubmitting(true);
     try {
-      const payload = { ...form, pet_details: details };
+      const sanitizedDetails = {
+      ...details,
+      age_years: details.age_years !== '' ? parseInt(details.age_years, 10) : 0,
+      age_months: details.age_months !== '' ? parseInt(details.age_months, 10) : 0,
+      weight_kg: details.weight_kg !== '' ? parseFloat(details.weight_kg) : null,
+      height_cm: details.height_cm !== '' ? parseInt(details.height_cm, 10) : null,
+    };
+    const payload = { ...form, pet_details: sanitizedDetails };
       if (photos.length > 0) {
         payload.images = photos.map(p => ({
           url: p.url,
@@ -359,10 +366,10 @@ export default function CreateListing() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Yaş (Yıl)">
+                <Field label="Yaş (Yıl)" required>
                   <input type="number" value={details.age_years} onChange={e => updateDetails('age_years', e.target.value)} placeholder="0" className="input-field" min="0" max="25" />
                 </Field>
-                <Field label="Yaş (Ay)">
+                <Field label="Yaş (Ay)" required>
                   <input type="number" value={details.age_months} onChange={e => updateDetails('age_months', e.target.value)} placeholder="0" className="input-field" min="0" max="11" />
                 </Field>
               </div>
@@ -419,8 +426,11 @@ export default function CreateListing() {
 
           <div className="flex justify-between">
             <button onClick={() => setStep(1)} className="btn-secondary">← Geri</button>
-            <button onClick={() => { if (!details.gender) return toast.error('Cinsiyet seçin'); setStep(3); }}
-              className="btn-primary">Devam Et →</button>
+            <button onClick={() => {
+                if (!details.gender) return toast.error('Cinsiyet seçin');
+                if (details.age_years === '' || details.age_months === '') return toast.error('Yaş (Yıl) ve Yaş (Ay) alanlarını doldurun');
+                setStep(3);
+              }} className="btn-primary">Devam Et →</button>
           </div>
         </>
       )}

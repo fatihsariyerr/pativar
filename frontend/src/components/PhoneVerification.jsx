@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
+import { signInWithPhoneNumber, RecaptchaVerifier, initializeRecaptchaConfig } from 'firebase/auth';
 import { auth } from '../utils/firebase';
 import toast from 'react-hot-toast';
 
@@ -12,12 +12,17 @@ export default function PhoneVerification({ phone, onVerified, disabled }) {
   const confirmationRef = useRef(null);
   const verifierRef = useRef(null);
   const inFlightRef = useRef(false);
+  const recaptchaInitialized = useRef(false);
 
-  useEffect(() => () => {
-    if (verifierRef.current) {
-      try { verifierRef.current.clear(); } catch {}
-      verifierRef.current = null;
-    }
+  useEffect(() => {
+    initializeRecaptchaConfig(auth).catch(() => {});
+    recaptchaInitialized.current = true;
+    return () => {
+      if (verifierRef.current) {
+        try { verifierRef.current.clear(); } catch {}
+        verifierRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -52,9 +57,8 @@ export default function PhoneVerification({ phone, onVerified, disabled }) {
     try {
       resetVerifier();
       verifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'normal',
+        size: 'invisible',
       });
-      await verifierRef.current.render();
       const confirmation = await signInWithPhoneNumber(auth, toE164(phone), verifierRef.current);
       confirmationRef.current = confirmation;
       setStep('code');
@@ -99,7 +103,7 @@ export default function PhoneVerification({ phone, onVerified, disabled }) {
 
   return (
     <div className="space-y-2">
-      <div id="recaptcha-container" className={step === 'idle' ? 'hidden' : 'flex justify-center'} />
+      <div id="recaptcha-container" />
       {step === 'idle' && (
         <button
           type="button"

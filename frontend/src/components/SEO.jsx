@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 const SITE_NAME = 'PatiVar';
 const SITE_URL = (typeof window !== 'undefined' && window.location.origin) || 'https://pativar.com';
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.jpg`;
-const DEFAULT_DESC = 'Türkiye\'nin en kapsamlı kedi ve köpek ilan platformu. Ücretsiz sahiplendirme ilanları, cins filtreleri, şehir bazlı arama ile patili dostunuza yuva bulun veya yeni bir dost edinin.';
+const DEFAULT_DESC = 'Türkiye\'nin kedi ve köpek ilan platformu. Ücretsiz sahiplendirme ilanları, cins ve şehir bazlı arama ile patili dostuna yuva bulun.';
 const DEFAULT_KEYWORDS = 'kedi ilanı, köpek ilanı, kedi sahiplendirme, köpek sahiplendirme, ücretsiz kedi, ücretsiz köpek, yavru kedi, yavru köpek, kedi ilanları, köpek ilanları, evcil hayvan ilan, pet ilan, sahiplendirme, çiftleştirme, kedi çiftleştirme, köpek çiftleştirme';
 
 export default function SEO({
@@ -18,7 +18,9 @@ export default function SEO({
   jsonLd,
 }) {
   const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} - Kedi & Köpek İlan Platformu`;
-  const canonicalUrl = url || (typeof window !== 'undefined' ? window.location.href : SITE_URL);
+  const canonicalUrl = url || (typeof window !== 'undefined'
+    ? window.location.origin + window.location.pathname
+    : SITE_URL);
 
   return (
     <Helmet>
@@ -42,9 +44,6 @@ export default function SEO({
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={image} />
-
-      {/* Hreflang */}
-      <meta httpEquiv="content-language" content="tr" />
 
       {Array.isArray(jsonLd)
         ? jsonLd.map((ld, i) => (

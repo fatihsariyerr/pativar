@@ -100,11 +100,6 @@ export default function Contact() {
         {/* Info cards */}
         <div className="space-y-4 lg:col-span-1">
           <div className="card p-5">
-            <div className="text-3xl mb-2">📧</div>
-            <h3 className="font-display font-bold text-base text-gray-800">E-posta</h3>
-            <p className="text-sm text-gray-500 mt-1">destek@pativar.com.tr</p>
-          </div>
-          <div className="card p-5">
             <div className="text-3xl mb-2">📍</div>
             <h3 className="font-display font-bold text-base text-gray-800">Adres</h3>
             <p className="text-sm text-gray-500 mt-1">İstanbul, Türkiye</p>

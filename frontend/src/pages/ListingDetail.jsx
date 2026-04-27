@@ -124,15 +124,15 @@ export default function ListingDetail() {
         {/* Images (3 col) */}
         <div className="lg:col-span-3">
           <div className="card p-2">
-            <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gradient-to-br from-cream-100 to-peach-50">
+            <div className="rounded-2xl overflow-hidden bg-gray-50 flex items-center justify-center min-h-[260px] max-h-[500px]">
               {listing.images?.length > 0 ? (
                 <img
                   src={listing.images[activeImage]?.image_url}
                   alt={`${listing.title}${listing.breed_name ? ' - ' + listing.breed_name : ''} ${petLabel.toLowerCase()} ${purposeLabel.toLowerCase()} ilanı${listing.city ? ' - ' + listing.city : ''}`}
-                  className="w-full h-full object-cover"
+                  className="w-full max-h-[500px] object-contain"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full h-64 flex items-center justify-center">
                   <span className="text-8xl opacity-20">{isCat ? '🐱' : '🐶'}</span>
                 </div>
               )}

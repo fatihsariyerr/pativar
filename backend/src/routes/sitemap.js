@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const db = require('../utils/db');
 
-const SITE_URL = process.env.FRONTEND_URL || 'https://pativar.com';
+const SITE_URL = 'https://pativar.com';
 
 const escapeXml = (s) => String(s || '').replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' }[c]));
 
 router.get('/sitemap.xml', async (req, res, next) => {
   try {
     const staticUrls = [
-      { loc: '/', changefreq: 'daily', priority: '1.0' },
+      { loc: '/', changefreq: 'always', priority: '1.0' },
       { loc: '/ilanlar', changefreq: 'hourly', priority: '0.9' },
       { loc: '/ilanlar?pet_type=cat', changefreq: 'hourly', priority: '0.9' },
       { loc: '/ilanlar?pet_type=dog', changefreq: 'hourly', priority: '0.9' },
@@ -23,13 +23,8 @@ router.get('/sitemap.xml', async (req, res, next) => {
       `SELECT id, updated_at FROM listings WHERE status = 'active' ORDER BY updated_at DESC LIMIT 5000`
     );
 
-    const { rows: catBreeds } = await db.query(`SELECT id FROM cat_breeds`).catch(() => ({ rows: [] }));
-    const { rows: dogBreeds } = await db.query(`SELECT id FROM dog_breeds`).catch(() => ({ rows: [] }));
-
     const urls = [
       ...staticUrls.map(u => ({ loc: `${SITE_URL}${u.loc}`, changefreq: u.changefreq, priority: u.priority })),
-      ...catBreeds.map(b => ({ loc: `${SITE_URL}/ilanlar?pet_type=cat&breed_id=${b.id}`, changefreq: 'weekly', priority: '0.7' })),
-      ...dogBreeds.map(b => ({ loc: `${SITE_URL}/ilanlar?pet_type=dog&breed_id=${b.id}`, changefreq: 'weekly', priority: '0.7' })),
       ...listings.map(l => ({
         loc: `${SITE_URL}/ilan/${l.id}`,
         lastmod: l.updated_at ? new Date(l.updated_at).toISOString() : undefined,

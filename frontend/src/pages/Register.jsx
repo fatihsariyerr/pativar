@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 import { cities } from '../utils/cities';
 import SEO from '../components/SEO';
-import PhoneVerification from '../components/PhoneVerification';
 import api from '../utils/api';
 
 export default function Register() {
@@ -13,17 +12,9 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', phone: '', password: '', password_confirm: '', city: '' });
-  const [phoneIdToken, setPhoneIdToken] = useState(null);
-  const [verifiedPhone, setVerifiedPhone] = useState('');
   const [phoneStatus, setPhoneStatus] = useState({ state: 'idle', message: '' });
 
-  const update = (k, v) => {
-    setForm(f => ({ ...f, [k]: v }));
-    if (k === 'phone' && v !== verifiedPhone) {
-      setPhoneIdToken(null);
-      setVerifiedPhone('');
-    }
-  };
+  const update = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   useEffect(() => {
     if (!/^(\+90|0)?[0-9]{10}$/.test(form.phone)) {
@@ -59,28 +50,22 @@ export default function Register() {
     if (d.length <= 9) return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
     return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7, 9)} ${d.slice(9, 11)}`;
   };
- 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password !== form.password_confirm) return toast.error('Şifreler eşleşmiyor');
     if (form.password.length < 6) return toast.error('Şifre en az 6 karakter olmalı');
     if (!form.phone.match(/^(\+90|0)?[0-9]{10}$/)) return toast.error('Geçerli bir telefon numarası giriniz');
     if (phoneStatus.state === 'taken') return toast.error(phoneStatus.message);
-    if (!phoneIdToken) return toast.error('Lütfen önce telefon numaranızı doğrulayın');
 
     setLoading(true);
     try {
-      const res = await register({ ...form, firebase_id_token: phoneIdToken });
+      const res = await register(form);
       toast.success(res.message || 'Hesabınız oluşturuldu! 🎉');
       navigate('/');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Kayıt başarısız');
     } finally { setLoading(false); }
-  };
-
-  const handlePhoneVerified = (idToken) => {
-    setPhoneIdToken(idToken);
-    setVerifiedPhone(form.phone);
   };
 
   return (
@@ -105,7 +90,7 @@ export default function Register() {
               Her hesap, ilk aboneliğe özel <strong>1 ücretsiz ilan hakkı</strong> ile gelir.
             </p>
           </div>
-     
+
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -146,18 +131,8 @@ export default function Register() {
               {phoneStatus.state === 'checking' && (
                 <div className="mt-2 text-xs text-gray-500">Telefon numarası kontrol ediliyor...</div>
               )}
-              <div className="mt-2">
-                <PhoneVerification
-                  phone={form.phone}
-                  onVerified={handlePhoneVerified}
-                  disabled={
-                    !/^(\+90|0)?[0-9]{10}$/.test(form.phone) ||
-                    phoneStatus.state !== 'available' ||
-                    (phoneIdToken && form.phone === verifiedPhone)
-                  }
-                />
-              </div>
             </div>
+
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Şehir</label>
               <select value={form.city} onChange={e => update('city', e.target.value)} className="input-field">
@@ -186,7 +161,7 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={loading || !phoneIdToken || phoneStatus.state === 'taken'}
+              disabled={loading || phoneStatus.state === 'taken'}
               className="btn-primary w-full !mt-5 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? '⏳ Kayıt yapılıyor...' : '🎉 Ücretsiz Kayıt Ol'}

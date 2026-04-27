@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -34,6 +35,10 @@ function ScrollToTop() {
 export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <html lang="tr" />
+        <meta name="robots" content="index,follow,max-image-preview:large" />
+      </Helmet>
       <Toaster position="top-right" toastOptions={{
         duration: 4000,
         style: { background: '#fff', color: '#2D3436', borderRadius: '1rem', fontFamily: 'Quicksand', boxShadow: '0 4px 24px -4px rgba(0,0,0,0.12)' }
